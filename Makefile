@@ -27,7 +27,8 @@ DESTDIR ?= ${PREFIX}
 
 DEPS = bin/.created ${CFLAGS_HASH_FILE} mtime_utils.h
 
-ALL_FILES = bin/sort_mtime
+ALL_FILES = bin/sort_mtime \
+	bin/get_mtime
 
 
 all: ${DEPS} ${ALL_FILES}
@@ -67,8 +68,16 @@ gather_mtimes.o : ${DEPS} gather_mtimes.c gather_mtimes.h
 sort_mtime.o : ${DEPS} sort_mtime.c
 	gcc ${USE_CFLAGS} sort_mtime.c -c -o sort_mtime.o
 
+get_mtime.o : ${DEPS} get_mtime.c
+	gcc ${USE_CFLAGS} get_mtime.c -c -o get_mtime.o
+
+
 bin/sort_mtime: ${DEPS} sort_mtime.o gather_mtimes.o mtime_utils.o
 	gcc ${USE_CFLAGS} ${USE_LDFLAGS} sort_mtime.o gather_mtimes.o mtime_utils.o -o bin/sort_mtime
+
+
+bin/get_mtime: ${DEPS} get_mtime.o gather_mtimes.o mtime_utils.o
+	gcc ${USE_CFLAGS} ${USE_LDFLAGS} get_mtime.o gather_mtimes.o mtime_utils.o -o bin/get_mtime
 
 remake:
 	make clean
