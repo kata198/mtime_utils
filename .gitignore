@@ -1,0 +1,6 @@
+*.o
+*~
+*.sw[po]
+bin/
+.cflags*
+.use_c_std
