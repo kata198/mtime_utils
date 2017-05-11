@@ -1,20 +1,62 @@
 
-# Uncomment following line to use fastest CFLAGS for gcc.
-#   program will only run on hardware that is equal or better to
-#   the current host.
-#CFLAGS ?= -O3 -march=native -mtune=native -flto -fuse-linker-plugin
+# Targets:
+#
+#   all (default) - Make all using env CFLAGS and LDFLAGS if present,
+#      otherwise optimized defaults
+#
+#   debug - Make using CFLAGS and LDFLAGS intended for debugging with gdb
+#
+#   static - Compile static versions of executables, using env CFLAGS / LDFLAGS
+#     otherwise optimized defaults
+#
+#   native - Compile executeables using super-optimized CFLAGS / LDFLAGS
+#     which are optimized (and will only run) on the current processor, or better.
+#
+#   native-static - Compile static versions of executables, using cflags from "native" targets.
+#
+#   clean - Clean all compiled files
+#
+#   distclean - Alias for clean ( Not automake generated, so "dist" prefix has no distinct meaning here)
+#
+#   remake - Cleans and recompiles
+#
+#   install - Installs executables into $DESTDIR/bin , or $PREFIX/bin if DESTDIR is not defined ,
+#      if neither are defined, detects if /usr/bin is writeable and if so installs there,
+#      otherwise installs to $HOME/bin
 
-# Default lame CFLAGS.
-CFLAGS ?= -O3 -flto -fuse-linker-plugin
+#  NOTES: Changing CFLAGS or LDFLAGS will cause everything to be recompiled.
 
-LDFLAGS ?= -flto -fuse-linker-plugin
+# Default CFLAGS
+CFLAGS ?= -O3 -flto -fuse-linker-plugin -s
+
+# Default LDFLAGS
+LDFLAGS ?= -flto -fuse-linker-plugin -Wl,-O1,--sort-common,--as-needed,-z,relro
+
+# Debug CFLAGS
+DEBUG_CFLAGS = -Og -ggdb3
+
+# Debug LDFLAGS
+DEBUG_LDFLAGS = -Wl,-Og -ggdb3
+
+# Native CFLAGS
+NATIVE_CFLAGS = -O3 -flto -fuse-linker-plugin -march=native -mtune=native
+
+# Native LDFLAGS
+NATIVE_LDFLAGS = -flto -fuse-linker-plugin -Wl,-O1,--sort-common,--as-needed,-z,relro
+
+# CFLAG to trigger static build
+STATIC_CFLAG = -static
+
+# LDFLAG to trigger static build
+STATIC_LDFLAG = -static
 
 C_STANDARD=$(shell test -f .use_c_std && cat .use_c_std || (echo 'int main(int argc, char *argv[]) { return 0; }' > .uc.c; ${CC} -std=gnu99 .uc.c >/dev/null 2>&1 && (echo 'gnu99' > .use_c_std; echo 'gnu99'; rm -f .uc.c) || ( echo 'c99' > .use_c_std; echo 'c99'; rm -f .uc.c ) ))
 
-# Actual flags to use.
-USE_CFLAGS = ${CFLAGS} -Wall -Wno-unused-function -pipe -std=${C_STANDARD}
+# Actual CFLAGS to use
+USE_CFLAGS = ${CFLAGS} -Wall -pipe -std=${C_STANDARD}
 
-USE_LDFLAGS = -Wl,-O1,--sort-common,--as-needed,-z,relro ${LDFLAGS}
+# Actual LDFLAGS to use
+USE_LDFLAGS = ${LDFLAGS}
 
 # Cause everything to recompile when CFLAGS changes, unless user is root (to support "sudo make install")
 WHOAMI=$(shell whoami)
@@ -31,14 +73,21 @@ ALL_FILES = bin/sort_mtime \
 	bin/get_mtime
 
 
+# TARGET - all (default)
 all: ${DEPS} ${ALL_FILES}
 #	@ /bin/true
 
+# TARGET - clean
 clean:
 	rm -Rf bin
 	rm -f *.o
 	rm -f .cflags.*
 
+# TARGET - distclean
+distclean:
+	@ make clean
+
+# TARGET- install
 install: ${ALL_FILES}
 	mkdir -p "${DESTDIR}/bin"
 	install -m 775 ${ALL_FILES} "${DESTDIR}/bin"
@@ -49,11 +98,30 @@ ${CFLAGS_HASH_FILE}:
 	test "${WHOAMI}" != "root" -a ! -e "${CFLAGS_HASH_FILE}" && rm -f .cflags.* || true
 	touch "${CFLAGS_HASH_FILE}"
 
-
+# TARGET - static
 static:
-	make clean;
-	CFLAGS="${CFLAGS} -static" make
+	CFLAGS="${CFLAGS} ${STATIC_CFLAG}" make
 
+# TARGET - debug
+debug:
+	CFLAGS="${DEBUG_CFLAGS}" LDFLAGS="${DEBUG_LDFLAGS}" make
+
+# TARGET - native
+native:
+	CFLAGS="${NATIVE_CFLAGS}" LDFLAGS="${NATIVE_LDFLAGS}" make
+
+# TARGET - static-native
+static-native:
+	CFLAGS="${NATIVE_CFLAGS} ${STATIC_CFLAG}" LDFLAGS="${NATIVE_LDFLAGS} ${STATIC_LDFLAG}" make
+
+# TARGET - remake
+remake:
+	make clean
+	make all
+
+native-static:
+	@ echo "No target native-static. I think you mean 'static-native'" >&2
+	@ false
 
 bin/.created:
 	mkdir -p bin
@@ -79,6 +147,3 @@ bin/sort_mtime: ${DEPS} sort_mtime.o gather_mtimes.o mtime_utils.o
 bin/get_mtime: ${DEPS} get_mtime.o gather_mtimes.o mtime_utils.o
 	gcc ${USE_CFLAGS} ${USE_LDFLAGS} get_mtime.o gather_mtimes.o mtime_utils.o -o bin/get_mtime
 
-remake:
-	make clean
-	make all
