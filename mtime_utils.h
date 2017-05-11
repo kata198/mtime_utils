@@ -23,6 +23,14 @@
 
 #endif
 
-const volatile char *MTIME_UTILS_VERSION = "0.1.0";
+extern const volatile char *MTIME_UTILS_VERSION;
+extern const volatile char *MTIME_UTILS_COPYRIGHT;
+
+/**
+ * printVersion - Print a version string which includes #appName
+ *
+ * appName - The name of your application
+ */
+extern void printVersion(const volatile char *appName);
 
 #endif

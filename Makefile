@@ -58,11 +58,17 @@ bin/.created:
 	mkdir -p bin
 	touch bin/.created
 
+mtime_utils.o : ${DEPS} mtime_utils.c
+	gcc ${USE_CFLAGS} mtime_utils.c -c -o mtime_utils.o
+
+gather_mtimes.o : ${DEPS} gather_mtimes.c gather_mtimes.h
+	gcc ${USE_CFLAGS} gather_mtimes.c -c -o gather_mtimes.o
+
 sort_mtime.o : ${DEPS} sort_mtime.c
 	gcc ${USE_CFLAGS} sort_mtime.c -c -o sort_mtime.o
 
-bin/sort_mtime: ${DEPS} sort_mtime.o
-	gcc ${USE_CFLAGS} ${USE_LDFLAGS} sort_mtime.o -o bin/sort_mtime
+bin/sort_mtime: ${DEPS} sort_mtime.o gather_mtimes.o mtime_utils.o
+	gcc ${USE_CFLAGS} ${USE_LDFLAGS} sort_mtime.o gather_mtimes.o mtime_utils.o -o bin/sort_mtime
 
 remake:
 	make clean
