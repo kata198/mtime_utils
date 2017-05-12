@@ -26,6 +26,8 @@
 
 #  NOTES: Changing CFLAGS or LDFLAGS will cause everything to be recompiled.
 
+USER_CFLAGS = $(shell env | grep ^CFLAGS= | sed 's/^CFLAGS=//g')
+
 # Default CFLAGS
 CFLAGS ?= -O3 -flto -fuse-linker-plugin -s
 
@@ -63,6 +65,11 @@ WHOAMI=$(shell whoami)
 CFLAGS_HASH=$(shell echo "CFLAGS=${USE_CFLAGS} .. LDFLAGS=${USE_LDFLAGS}" | md5sum | tr ' ' '\n' | head -n1)
 CFLAGS_HASH_FILE=$(shell test "${WHOAMI}" != "root" && echo .cflags.${CFLAGS_HASH} || echo .cflags.*)
 
+_X=$(shell printf "%s" "${CFLAGS}" > .last_cflags && printf "%s" "${USE_LDFLAGS}" > .last_ldflags)
+
+LAST_CFLAGS=$(shell cat .last_cflags)
+LAST_LDFLAGS=$(shell cat .last_ldflags)
+
 PREFIX ?= $(shell test -w "/usr/bin" && echo "/usr" || echo "${HOME}")
 
 DESTDIR ?= ${PREFIX}
@@ -75,6 +82,7 @@ ALL_FILES = bin/sort_mtime \
 
 # TARGET - all (default)
 all: ${DEPS} ${ALL_FILES}
+	@ echo ${_X} >/dev/null 2>&1
 #	@ /bin/true
 
 # TARGET - clean
@@ -82,15 +90,21 @@ clean:
 	rm -Rf bin
 	rm -f *.o
 	rm -f .cflags.*
+	rm -f .last_cflags
+	rm -f .last_ldflags
 
 # TARGET - distclean
 distclean:
 	@ make clean
 
+install:
+	[ -f ".last_cflags" -a -z "${USER_CFLAGS}" ] && (export CFLAGS="${LAST_CFLAGS}" && export LDFLAGS="${LAST_LDFLAGS}" && make _install DESTDIR=${DESTDIR}) || make all _install
+
 # TARGET- install
-install: ${ALL_FILES}
+_install: ${ALL_FILES}
 	mkdir -p "${DESTDIR}/bin"
 	install -m 775 ${ALL_FILES} "${DESTDIR}/bin"
+
 
 
 # When hash of CFLAGS changes, this unit causes all compiles to become invalidated
