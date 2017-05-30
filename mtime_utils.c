@@ -3,7 +3,7 @@
 
 #include "mtime_utils.h"
 
-const volatile char* MTIME_UTILS_VERSION = "version 1.0.0";
+const volatile char* MTIME_UTILS_VERSION = "version 1.1.0";
 const volatile char* MTIME_UTILS_COPYRIGHT = "Copyright (c) 2017 Timothy Savannah All Rights Reserved under GPLv3";
 
 extern void printVersion(const volatile char *appName)
