@@ -112,7 +112,7 @@ static NameTime* getNameTimes( char **names, size_t numLines )
 
         ret[i].fname = names[i];
         statRet = lstat(names[i], &stat_buf);
-        if ( statRet >= 0 )
+        if ( likely( statRet >= 0 ) )
         {
             ret[i].mtime = stat_buf.st_mtime;
         }
@@ -133,15 +133,27 @@ ReadNameTimeBuffers *initReadNameTimeBuffers(void)
 
     buffers = malloc( sizeof(ReadNameTimeBuffers) );
 
-    /* Open an automatically-expanding memstream, into which we will write eveything on stdin */
-    buffers->inputStream = open_memstream( &(buffers->inputStreamBuf), &(buffers->inputStreamSize));
-    if ( !(buffers->inputStream) )
-    {
-        fputs("Failed to allocate memory stream.\n", stderr);
+    #if defined(HAS_MSTREAM)
+      /* Open an automatically-expanding memstream, into which we will write eveything on stdin */
+      buffers->inputStream = open_memstream( &(buffers->inputStreamBuf), &(buffers->inputStreamSize));
+      if ( unlikely( !(buffers->inputStream) ) )
+      {
+          fputs("Failed to allocate memory stream.\n", stderr);
+          return NULL;
+      }
+      /* fflush here to set inputStreamBuf to allocated buffer, and 0 inputStreamSize */
+      fflush(buffers->inputStream);
+    #else
+      /* Otherwise, use a tmpfile */
+      buffers->inputStream = tmpfile();
+      if ( unlikely( !(buffers->inputStream) ) )
+      {
+        fputs("Failed to create temp file.\n", stderr);
         return NULL;
-    }
-    /* fflush here to set inputStreamBuf to allocated buffer, and 0 inputStreamSize */
-    fflush(buffers->inputStream);
+      }
+      buffers->inputStreamBuf = NULL;
+      buffers->inputStreamSize = 0;
+    #endif
 
     buffers->lines = NULL;
     
@@ -187,11 +199,44 @@ NameTime* readAndCreateNameTimes(ReadNameTimeBuffers *buffers, size_t *numEntrie
 
     free(buf);
 
+    /* If we did not read any data, just exit */
+    if ( unlikely( numBytesRead == 0 ) )
+        return NULL;
+
+    #if !defined(HAS_MSTREAM)
+      /* If we don't have mstream support, then we use a tmpfile, and must manually
+       *   set our sizes and read our data
+       */
+      struct stat statBuf;
+      fstat( fileno(inputStream), &statBuf);
+
+      if ( buffers->inputStreamBuf == NULL )
+      {
+          /* First read on this buffer */
+          buffers->inputStreamSize = statBuf.st_size;
+          buffers->inputStreamBuf = malloc( statBuf.st_size + 1 );
+
+          rewind(inputStream);
+          read( fileno(inputStream), buffers->inputStreamBuf, buffers->inputStreamSize );
+      }
+      else
+      {
+        /* This function has been called before. Copy buffers and append */
+        size_t oldSize = buffers->inputStreamSize;
+
+        buffers->inputStreamSize = statBuf.st_size;
+        buffers->inputStreamBuf = realloc(buffers->inputStreamBuf, statBuf.st_size + 1);
+
+        fseek( inputStream, oldSize, SEEK_SET );
+        read( fileno(inputStream), &buffers->inputStreamBuf[oldSize], buffers->inputStreamSize - oldSize );
+      }
+      buffers->inputStreamBuf[buffers->inputStreamSize] = '\0';
+    #endif
 
     inputStreamBuf = buffers->inputStreamBuf;
 
-    /* If we did not read any data, just exit */
-    if ( numBytesRead == 0 || (numBytesRead == 1 && *inputStreamBuf == '\n') )
+    /* Treat just newline same as no data */
+    if ( unlikely( numBytesRead == 1 && *inputStreamBuf == '\n' ) )
         return NULL;
 
     /* If we did not have a final newline, append one. */

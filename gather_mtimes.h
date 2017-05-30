@@ -63,5 +63,9 @@ extern void destroyReadNameTimeBuffers(ReadNameTimeBuffers *buffers);
  */
 extern NameTime* readAndCreateNameTimes(ReadNameTimeBuffers *buffers, size_t *numEntries, FILE *stream);
 
+#if defined __USE_XOPEN2K8 || __GLIBC_USE (LIB_EXT2)
+#define HAS_MSTREAM
+#endif
+
 
 #endif
