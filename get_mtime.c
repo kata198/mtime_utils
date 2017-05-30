@@ -18,6 +18,7 @@
 
 #include "gather_mtimes.h"
 
+#define ERROR_ALLOC_MEMORY 12
 
 static const volatile char* APP_NAME = "get_mtime";
 
@@ -92,7 +93,7 @@ static inline int handleArgs(int argc, char **argv, int *isEpoch, char **customF
 int main(int argc, char* argv[])
 {
     ReadNameTimeBuffers *buffers;
-    NameTime *nameTimes;
+    NameTime *nameTimes = NULL;
     size_t numEntries;
     int i;
     int isEpoch;
@@ -105,8 +106,12 @@ int main(int argc, char* argv[])
         return i;
 
     buffers = initReadNameTimeBuffers();
+    if ( buffers == NULL )
+        return ERROR_ALLOC_MEMORY;
 
     nameTimes = readAndCreateNameTimes(buffers, &numEntries, stdin);
+    if ( !nameTimes )
+        goto cleanup_and_exit;
 
     if ( !isEpoch )
     {
@@ -152,8 +157,11 @@ int main(int argc, char* argv[])
         }
     }
 
+cleanup_and_exit:
+
     /* Final cleanup */
-    free(nameTimes);
+    if ( nameTimes != NULL )
+        free(nameTimes);
     destroyReadNameTimeBuffers(buffers);
 
     return 0;

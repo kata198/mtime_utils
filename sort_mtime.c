@@ -17,6 +17,7 @@
 
 #include "gather_mtimes.h"
 
+#define ERROR_ALLOC_MEMORY 12
 
 static const volatile char* APP_NAME = "sort_mtime";
 
@@ -101,7 +102,7 @@ static inline int handleArgs(int argc, char **argv, int *isReverse)
 int main(int argc, char* argv[])
 {
     ReadNameTimeBuffers *buffers;
-    NameTime *nameTimes;
+    NameTime *nameTimes = NULL;
     size_t numEntries;
     int i;
     int isReverse;
@@ -113,8 +114,12 @@ int main(int argc, char* argv[])
         return i;
 
     buffers = initReadNameTimeBuffers();
+    if ( buffers == NULL )
+        return ERROR_ALLOC_MEMORY;
 
     nameTimes = readAndCreateNameTimes(buffers, &numEntries, stdin);
+    if ( nameTimes == NULL )
+        goto cleanup_and_exit;
 
     /*
      * Sort the times. We always sort in the same direction, but
@@ -143,9 +148,10 @@ int main(int argc, char* argv[])
         }
     }
 
-
+cleanup_and_exit:
     /* Final cleanup */
-    free(nameTimes);
+    if ( nameTimes != NULL )
+        free(nameTimes);
     destroyReadNameTimeBuffers(buffers);
 
     return 0;
