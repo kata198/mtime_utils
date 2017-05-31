@@ -1,2 +1,6 @@
+1.1.0 - May 29 2017
+- Lots of cleanups, fixups, optimizations, improvements
+
+
 1.0.0 - May 11 2017
 - Initial release, with both get_mtime and sort_mtime
