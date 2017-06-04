@@ -12,21 +12,21 @@
 #include <sys/types.h>
 
 /* 
- * NameTime - A struct of provided-filename, and mtime associated.
+ * NameStat - A struct of provided-filename, and mtime associated.
  *   This is the object that will be sorted.
  */
 typedef struct {
-    char   *fname;
-    time_t  mtime;
+    char        *fname;
+    struct stat statBuf;
 
-} NameTime;
+} NameStat;
 
 /*
- * ReadNameTimeBuffers - Some "worker" data used for producting the NameTime data.
- *   Created once by initReadNameTimeBuffers,
- *   destroyed with destroyReadNameTimeBuffers.
+ * ReadNameStatBuffers - Some "worker" data used for producting the NameStat data.
+ *   Created once by initReadNameStatBuffers,
+ *   destroyed with destroyReadNameStatBuffers.
  *
- *   Destroying this buffer will free data pointed-to by NameTime objects,
+ *   Destroying this buffer will free data pointed-to by NameStat objects,
  *     so do it only when you are done with the data.
  */
 typedef struct {
@@ -35,33 +35,33 @@ typedef struct {
     size_t inputStreamSize;
     char **lines;
 
-} ReadNameTimeBuffers;
+} ReadNameStatBuffers;
 
 
 /**
- * initReadNameTimeBuffers - Return created ReadNameTimeBuffers object.
+ * initReadNameStatBuffers - Return created ReadNameStatBuffers object.
  *    Should be called only once per app.
  */
-extern ReadNameTimeBuffers *initReadNameTimeBuffers(void);
+extern ReadNameStatBuffers *initReadNameStatBuffers(void);
 
 /**
- * destroyReadNameTimeBuffers - Destroy the ReadNameTimeBuffers object.
- *    Should be called only after all NameTime data is done being used,
+ * destroyReadNameStatBuffers - Destroy the ReadNameStatBuffers object.
+ *    Should be called only after all NameStat data is done being used,
  *      as the buffered data overlaps (not copied)
  */
-extern void destroyReadNameTimeBuffers(ReadNameTimeBuffers *buffers);
+extern void destroyReadNameStatBuffers(ReadNameStatBuffers *buffers);
 
 /**
- * readAndCreateNameTimes - Reads a list of files (separated by newline) from a given stream,
+ * readAndCreateNameStats - Reads a list of files (separated by newline) from a given stream,
  *   parses and sanitizes ( e.x. removes empty lines).
  *
- *   buffers - Should be the object returned by #initReadNameTimeBuffers
+ *   buffers - Should be the object returned by #initReadNameStatBuffers
  *
  *   numEntries - A pointer which will be filled with the number of valid entries in return value
  *
  *   stream  - Stream from whence to read data (like stdin)
  */
-extern NameTime* readAndCreateNameTimes(ReadNameTimeBuffers *buffers, size_t *numEntries, FILE *stream);
+extern NameStat* readAndCreateNameStats(ReadNameStatBuffers *buffers, size_t *numEntries, FILE *stream);
 
 #if defined __USE_XOPEN2K8 || __GLIBC_USE (LIB_EXT2)
 #define HAS_MSTREAM

@@ -37,16 +37,16 @@ static void printUsage(void)
 
 
 /**
- * compare_NameTime - Function called by qsort for comparing two NameTime objects.
+ * compare_NameStat_mtime - Function called by qsort for comparing two NameStat objects.
  */
-int compare_NameTime(const void *_item1, const void *_item2)
+int compare_NameStat_mtime(const void *_item1, const void *_item2)
 {
-    NameTime *item1, *item2;
+    NameStat *item1, *item2;
 
-    item1 = (NameTime *)_item1;
-    item2 = (NameTime *)_item2;
+    item1 = (NameStat *)_item1;
+    item2 = (NameStat *)_item2;
 
-    return item1->mtime - item2->mtime;
+    return item1->statBuf.st_mtime - item2->statBuf.st_mtime;
 }
 
 /**
@@ -101,8 +101,8 @@ static inline int handleArgs(int argc, char **argv, int *isReverse)
  */
 int main(int argc, char* argv[])
 {
-    ReadNameTimeBuffers *buffers;
-    NameTime *nameTimes = NULL;
+    ReadNameStatBuffers *buffers;
+    NameStat *nameStats = NULL;
     size_t numEntries;
     int i;
     int isReverse;
@@ -113,19 +113,19 @@ int main(int argc, char* argv[])
     if ( (i = handleArgs ( argc, (char **)argv, &isReverse ) ) >= 0 )
         return i;
 
-    buffers = initReadNameTimeBuffers();
+    buffers = initReadNameStatBuffers();
     if ( buffers == NULL )
         return ERROR_ALLOC_MEMORY;
 
-    nameTimes = readAndCreateNameTimes(buffers, &numEntries, stdin);
-    if ( nameTimes == NULL )
+    nameStats = readAndCreateNameStats(buffers, &numEntries, stdin);
+    if ( nameStats == NULL )
         goto cleanup_and_exit;
 
     /*
      * Sort the times. We always sort in the same direction, but
      *   depending on #isReverse we may iterate backwards.
      */
-    qsort( nameTimes, numEntries, sizeof(NameTime), compare_NameTime );
+    qsort( nameStats, numEntries, sizeof(NameStat), compare_NameStat_mtime );
 
 
     /*
@@ -135,24 +135,24 @@ int main(int argc, char* argv[])
     {
         for(i=0; i < numEntries; i++)
         {
-            if( likely(nameTimes[i].mtime != 0) )
-                printf("%s\n", nameTimes[i].fname);
+            if( likely(nameStats[i].statBuf.st_mtime != 0) )
+                printf("%s\n", nameStats[i].fname);
         }
     }
     else
     {
         for( i=numEntries-1; i >= 0; i--)
         {
-            if( likely(nameTimes[i].mtime != 0) )
-                printf("%s\n", nameTimes[i].fname);
+            if( likely(nameStats[i].statBuf.st_mtime != 0) )
+                printf("%s\n", nameStats[i].fname);
         }
     }
 
 cleanup_and_exit:
     /* Final cleanup */
-    if ( nameTimes != NULL )
-        free(nameTimes);
-    destroyReadNameTimeBuffers(buffers);
+    if ( nameStats != NULL )
+        free(nameStats);
+    destroyReadNameStatBuffers(buffers);
 
     return 0;
 }

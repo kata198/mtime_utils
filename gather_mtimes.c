@@ -90,36 +90,33 @@ static char** splitLines(char *buf, size_t *numLines)
 }
 
 /**
- * getNameTimes - Take in a list of names (and a size),
- *   query the mtimes for each, and return a list of NameTime objects
+ * getNameStats - Take in a list of names (and a size),
+ *   query the mtimes for each, and return a list of NameStat objects
  *   intended for sorting.
  *
  *   If a file cannot be lstat'd, a message will be printed to stderr,
  *   and the mtime will be set to 0. These items should not be printed.
  */
-static NameTime* getNameTimes( char **names, size_t numLines )
+static NameStat* getNameStats( char **names, size_t numLines )
 {
-    NameTime *ret;
+    NameStat *ret;
     struct stat stat_buf;
     int i;
 
     int statRet;
 
-    ret = malloc( sizeof(NameTime) * (numLines + 1 ) );
+    ret = malloc( sizeof(NameStat) * (numLines + 1 ) );
 
     for ( i=0; i < numLines; i++ )
     {
 
         ret[i].fname = names[i];
-        statRet = lstat(names[i], &stat_buf);
-        if ( likely( statRet >= 0 ) )
-        {
-            ret[i].mtime = stat_buf.st_mtime;
-        }
-        else
+        statRet = lstat(names[i], &ret[i].statBuf);
+        if ( unlikely( statRet < 0 ) )
         {
             fprintf(stderr, "Err: Cannot stat file: %s\n", ret[i].fname);
-            ret[i].mtime = 0;
+            
+            memset(&ret[i].statBuf, 0x0, sizeof(struct stat));
         }
     }
 
@@ -127,11 +124,11 @@ static NameTime* getNameTimes( char **names, size_t numLines )
 
 }
 
-ReadNameTimeBuffers *initReadNameTimeBuffers(void)
+ReadNameStatBuffers *initReadNameStatBuffers(void)
 {
-    ReadNameTimeBuffers *buffers;
+    ReadNameStatBuffers *buffers;
 
-    buffers = malloc( sizeof(ReadNameTimeBuffers) );
+    buffers = malloc( sizeof(ReadNameStatBuffers) );
 
     #if defined(HAS_MSTREAM)
       /* Open an automatically-expanding memstream, into which we will write eveything on stdin */
@@ -160,7 +157,7 @@ ReadNameTimeBuffers *initReadNameTimeBuffers(void)
     return buffers;
 }
 
-void destroyReadNameTimeBuffers(ReadNameTimeBuffers *buffers)
+void destroyReadNameStatBuffers(ReadNameStatBuffers *buffers)
 {
     free(buffers->lines);
 
@@ -171,13 +168,13 @@ void destroyReadNameTimeBuffers(ReadNameTimeBuffers *buffers)
 }
 
 
-NameTime* readAndCreateNameTimes(ReadNameTimeBuffers *buffers, size_t *numEntries, FILE *stream)
+NameStat* readAndCreateNameStats(ReadNameStatBuffers *buffers, size_t *numEntries, FILE *stream)
 {
     size_t numBytesRead;
     char *buf;
 
     char **lines;
-    NameTime* nameTimes;
+    NameStat* nameTimes;
     FILE *inputStream;
     char *inputStreamBuf;
 
@@ -258,10 +255,10 @@ NameTime* readAndCreateNameTimes(ReadNameTimeBuffers *buffers, size_t *numEntrie
     buffers->lines = lines;
 
     /*
-     * Stat the files, return a NameTimes array, with non-zero mtime for
+     * Stat the files, return a NameStats array, with non-zero mtime for
      *  files that could be stat'd
      */
-    nameTimes = getNameTimes(lines, *numEntries);
+    nameTimes = getNameStats(lines, *numEntries);
 
     return nameTimes;
 

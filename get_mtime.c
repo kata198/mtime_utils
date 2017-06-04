@@ -92,8 +92,8 @@ static inline int handleArgs(int argc, char **argv, int *isEpoch, char **customF
  */
 int main(int argc, char* argv[])
 {
-    ReadNameTimeBuffers *buffers;
-    NameTime *nameTimes = NULL;
+    ReadNameStatBuffers *buffers;
+    NameStat *nameStats = NULL;
     size_t numEntries;
     int i;
     int isEpoch;
@@ -105,12 +105,12 @@ int main(int argc, char* argv[])
     if ( (i = handleArgs ( argc, (char **)argv, &isEpoch, &customFormat ) ) >= 0 )
         return i;
 
-    buffers = initReadNameTimeBuffers();
+    buffers = initReadNameStatBuffers();
     if ( buffers == NULL )
         return ERROR_ALLOC_MEMORY;
 
-    nameTimes = readAndCreateNameTimes(buffers, &numEntries, stdin);
-    if ( !nameTimes )
+    nameStats = readAndCreateNameStats(buffers, &numEntries, stdin);
+    if ( !nameStats )
         goto cleanup_and_exit;
 
     if ( !isEpoch )
@@ -120,11 +120,11 @@ int main(int argc, char* argv[])
         {
             for(i=0; i < numEntries; i++)
             {
-                if ( likely(nameTimes[i].mtime != 0) )
+                if ( likely(nameStats[i].statBuf.st_mtime != 0) )
                 {
-                    ctime_r(&nameTimes[i].mtime, timeBuff);
+                    ctime_r(&nameStats[i].statBuf.st_mtime, timeBuff);
                     
-                    printf("%s\t%s", nameTimes[i].fname, timeBuff);
+                    printf("%s\t%s", nameStats[i].fname, timeBuff);
                 }
             }
         }
@@ -133,12 +133,12 @@ int main(int argc, char* argv[])
             struct tm *tmpTm;
             for(i=0; i < numEntries; i++)
             {
-                if ( likely(nameTimes[i].mtime != 0) )
+                if ( likely(nameStats[i].statBuf.st_mtime != 0) )
                 {
-                    tmpTm = localtime(&nameTimes[i].mtime);
+                    tmpTm = localtime(&nameStats[i].statBuf.st_mtime);
                     strftime(timeBuff, 64, customFormat, tmpTm);
                     
-                    printf("%s\t%s\n", nameTimes[i].fname, timeBuff);
+                    printf("%s\t%s\n", nameStats[i].fname, timeBuff);
                 }
             }
 
@@ -150,9 +150,9 @@ int main(int argc, char* argv[])
     {
         for(i=0; i < numEntries; i++)
         {
-            if ( likely(nameTimes[i].mtime != 0) )
+            if ( likely(nameStats[i].statBuf.st_mtime != 0) )
             {
-                printf("%s\t%ld\n", nameTimes[i].fname, nameTimes[i].mtime);
+                printf("%s\t%ld\n", nameStats[i].fname, nameStats[i].statBuf.st_mtime);
             }
         }
     }
@@ -160,9 +160,9 @@ int main(int argc, char* argv[])
 cleanup_and_exit:
 
     /* Final cleanup */
-    if ( nameTimes != NULL )
-        free(nameTimes);
-    destroyReadNameTimeBuffers(buffers);
+    if ( nameStats != NULL )
+        free(nameStats);
+    destroyReadNameStatBuffers(buffers);
 
     return 0;
 }
