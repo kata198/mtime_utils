@@ -79,7 +79,8 @@ DESTDIR ?= ${PREFIX}
 DEPS = bin/.created objects/.created ${CFLAGS_HASH_FILE} mtime_utils.h
 
 ALL_FILES = bin/sort_mtime \
-	bin/get_mtime
+	bin/get_mtime \
+	bin/get_owner
 
 
 # TARGET - all (default)
@@ -167,11 +168,16 @@ objects/sort_mtime.o : ${DEPS} sort_mtime.c
 objects/get_mtime.o : ${DEPS} get_mtime.c
 	gcc ${USE_CFLAGS} get_mtime.c -c -o objects/get_mtime.o
 
+objects/get_owner.o : ${DEPS} get_owner.c
+	gcc ${USE_CFLAGS} get_owner.c -c -o objects/get_owner.o
+
+
 
 bin/sort_mtime: ${DEPS} objects/sort_mtime.o objects/gather_mtimes.o objects/mtime_utils.o
 	gcc ${USE_LDFLAGS} objects/sort_mtime.o objects/gather_mtimes.o objects/mtime_utils.o -o bin/sort_mtime
 
-
 bin/get_mtime: ${DEPS} objects/get_mtime.o objects/gather_mtimes.o objects/mtime_utils.o
 	gcc ${USE_LDFLAGS} objects/get_mtime.o objects/gather_mtimes.o objects/mtime_utils.o -o bin/get_mtime
 
+bin/get_owner: ${DEPS} objects/get_owner.o objects/gather_mtimes.o objects/mtime_utils.o
+	gcc ${USE_LDFLAGS} objects/get_owner.o objects/gather_mtimes.o objects/mtime_utils.o -o bin/get_owner
