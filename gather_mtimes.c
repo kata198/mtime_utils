@@ -100,7 +100,6 @@ static char** splitLines(char *buf, size_t *numLines)
 static NameStat* getNameStats( char **names, size_t numLines )
 {
     NameStat *ret;
-    struct stat stat_buf;
     int i;
 
     int statRet;
