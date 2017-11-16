@@ -62,15 +62,16 @@ USE_CFLAGS = ${CFLAGS} -Wall -pipe -std=${C_STANDARD}
 # Actual LDFLAGS to use
 USE_LDFLAGS = ${LDFLAGS}
 
-# Cause everything to recompile when CFLAGS changes, unless user is root (to support "sudo make install")
-WHOAMI=$(shell whoami)
-CFLAGS_HASH=$(shell echo "CFLAGS=${USE_CFLAGS} .. LDFLAGS=${USE_LDFLAGS}" | md5sum | tr ' ' '\n' | head -n1)
-CFLAGS_HASH_FILE=$(shell test "${WHOAMI}" != "root" && echo .cflags.${CFLAGS_HASH} || echo .cflags.*)
-
-_X=$(shell printf "%s" "${CFLAGS}" > .last_cflags && printf "%s" "${USE_LDFLAGS}" > .last_ldflags)
 
 LAST_CFLAGS=$(shell cat .last_cflags)
 LAST_LDFLAGS=$(shell cat .last_ldflags)
+
+
+# Cause everything to recompile when CFLAGS changes, unless user is root (to support "sudo make install")
+WHOAMI=$(shell whoami)
+CFLAGS_HASH=$(shell echo "${CFLAGS}" | md5sum | tr ' ' '\n' | head -n1)
+CFLAGS_HASH_FILE=$(shell test "${WHOAMI}" != "root" && echo .cflags.${CFLAGS_HASH} || echo .cflags.*)
+
 
 PREFIX ?= $(shell test -w "/usr/bin" && echo "/usr" || echo "${HOME}")
 
@@ -86,7 +87,6 @@ ALL_FILES = bin/sort_mtime \
 
 # TARGET - all (default)
 all: ${DEPS} ${ALL_FILES}
-#	@ echo ${_X} >/dev/null 2>&1
 #	@ /bin/true
 
 # TARGET - clean
@@ -116,8 +116,9 @@ _install: ${ALL_FILES}
 
 # When hash of CFLAGS changes, this unit causes all compiles to become invalidated
 ${CFLAGS_HASH_FILE}:
-	@ test "${WHOAMI}" != "root" -a ! -e "${CFLAGS_HASH_FILE}" && rm -f .cflags.* || true
-	@ touch "${CFLAGS_HASH_FILE}"
+	test "${WHOAMI}" != "root" -a ! -e "${CFLAGS_HASH_FILE}" && rm -f .cflags.* || true
+	test ! -e "${CFLAGS_HASH_FILE}" -o "${WHOAMI}" != "root" && (printf "%s" "${CFLAGS}" > .last_cflags && printf "%s" "${USE_LDFLAGS}" > .last_ldflags) || true
+	touch "${CFLAGS_HASH_FILE}"
 
 # TARGET - static
 static:
