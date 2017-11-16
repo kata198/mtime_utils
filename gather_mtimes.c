@@ -27,9 +27,9 @@
  */
 static inline size_t getNumLines(char *buf)
 {
-    size_t numLines;
+    size_t numLines = 0;
 
-    for( numLines=0; *buf != '\0'; buf++ )
+    for( ; *buf != '\0'; buf++ )
     {
         if ( *buf == '\n' )
             numLines += 1;
@@ -37,6 +37,8 @@ static inline size_t getNumLines(char *buf)
     
     return numLines;
 }
+
+static char EMPTY_STR[] = { 0 };
 
 /*
  * splitLines - Take a buffer, and return a char** with each
@@ -48,43 +50,98 @@ static inline size_t getNumLines(char *buf)
  *
  *   *numLines will contain the number of non-empty lines
  *     (and matches the size of return)
+ *
+ *    NOTE - This WILL overwrite data in $buf, and $buf must remain
+ *             allocated as the return points within that buffer
  */
 static char** splitLines(char *buf, size_t *numLines)
 {
-    char **ret;
-    int i;
+    char **ret; /* Our array to return */
     size_t _numLines;
-    char *tmp;
+
+    int i;
+    char *lastEntry;
+    char *lastEntryEnd;
+
 
     _numLines = getNumLines(buf);
 
+
+    if ( unlikely( _numLines == 0 ) )
+    {
+        /* This cannot occur when using the readAndCreateNameStats method,
+             as it will append a tailing newline if one is not present.
+
+             But prepare and handle other circumstances anyway.
+        */
+        ret = malloc( sizeof(char*) );
+        ret[0] = EMPTY_STR;
+
+        *numLines = 0;
+        return ret;
+    }
+
     ret = malloc( sizeof(char*) * (_numLines) );
 
+    /* Point first line to start of the buff */
     ret[0] = buf;
+
+    /* If we start with newline characters, keep moving the first
+        entry forward by 1 char until we hit a non-newline (And thus start of data)
+    */
+    while ( *ret[0] == '\n' )
+    {
+        ret[0] += 1;
+        _numLines -= 1;
+    }
 
     for( i=1; i < _numLines; i++)
     {
+        /* For all the rest of the lines:
+             1. Point to first character after first newline character found at previous
+                  line pointer.
+             2. Zero out that newline character (thus sealing the previous line)
+        */
         ret[i] = strchr(ret[i-1] + 1, '\n');
 
         *ret[i] = '\0';
         ret[i] += 1;
 
+        /* Check if our new line begins with a newline character */
         while( *ret[i] == '\n' )
         {
+            /* If so, move the pointer forward and subtract expected number of lines */
             *ret[i] = '\0';
             ret[i] += 1;
             _numLines -= 1;
-            if ( unlikely( ret[i] == '\0' ) )
-            {
-                break;
-            }
         } 
     }
 
-   tmp = ret[ _numLines - 1];
+    if ( _numLines == 0 )
+    {
+        /* If all we had was newlines, zero out the first slot */
+        ret[0][0] = '\0';
+    }
+    else
+    {
+        /* Otherwise, since our loop above "seals" the previous line each time,
+            depending on tailing newlines etc. we may need to seal the current
+            final line if it contains a newline, replacing it with a 0 byte
+        */
+        lastEntry = ret[ _numLines - 1];
 
-   tmp[ strlen(tmp) - 1 ] = '\0';
-   *numLines = _numLines;
+        /*lastEntryEnd = &lastEntry[ strlen(lastEntry) - 1];
+*/
+        lastEntryEnd = strchr(lastEntry, '\n');
+
+        /*if ( *lastEntryEnd == '\n' )*/
+        if ( lastEntryEnd != NULL )
+        {
+            *lastEntryEnd = '\0';
+        }
+    }
+
+    *numLines = _numLines;
 
     return ret;
 }
