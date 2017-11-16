@@ -1,3 +1,8 @@
+1.1.2 - Nov 16 2017
+- Fixup an issue where "make native" followed by "sudo make install" would
+result in a recompile without native flags.
+- Improve compiling as root support
+
 1.1.1 - Nov 16 2017
 - Fix a bug where sometimes consecutive blank lines could result in a "file
 not found" error, and other minor issues with poorly formatted input (i.e. not
